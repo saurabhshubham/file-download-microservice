@@ -1,0 +1,58 @@
+package com.file.example.filedownloadmicroservice.controller;
+import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import com.file.example.filedownloadmicroservice.services.FileDownloadServices;
+
+
+@RestController
+public class FileController {
+
+
+
+	@Autowired
+	private FileDownloadServices fileDownloadServices;
+
+	private  final Logger LOG = LoggerFactory.getLogger(this.getClass());
+
+
+
+
+	@RequestMapping(value="/downloadFile/{fileName:.+}", method= RequestMethod.GET)
+	public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
+
+		System.out.println("entering into file download");
+		LOG.debug("Downloading the file");
+		Resource resource = fileDownloadServices.loadFileAsResource(fileName);
+
+
+		String contentType = null;
+		try {
+			contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
+		} catch (IOException ex) {
+			LOG.info("Could not determine file type.");
+		}
+
+		if(contentType == null) {
+			contentType = "application/octet-stream";
+		}
+
+
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(contentType))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+				.body(resource);
+
+	}
+
+}
